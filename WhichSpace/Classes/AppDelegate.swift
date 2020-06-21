@@ -21,7 +21,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SUUpdaterDel
 
     let spacesMonitorFile = "~/Library/Preferences/com.apple.spaces.plist"
 
-    let statusBarItem = NSStatusBar.system.statusItem(withLength: 27)
+    let statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     let conn = _CGSDefaultConnection()
 
     static var darkModeEnabled = false
@@ -114,14 +114,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SUUpdaterDel
         let displayInfo = info[0]
         let activeSpaceID = (displayInfo["Current Space"]! as! NSDictionary)["ManagedSpaceID"] as! Int
         let spaces = displayInfo["Spaces"] as! NSArray
-        for (index, space) in spaces.enumerated() {
-            let spaceID = (space as! NSDictionary)["ManagedSpaceID"] as! Int
-            let spaceNumber = index + 1
-            if spaceID == activeSpaceID {
-                statusBarItem.button?.title = String("\(spaceNumber)")
-                return
-            }
-        }
+        
+        let openSpaces = spaces
+            .compactMap { return ($0 as! NSDictionary)["ManagedSpaceID"] as? Int }
+            .filter { $0 != activeSpaceID }
+            .filter { 0...50 ~= $0 }
+            .sorted()
+
+        let lhs = NSMutableAttributedString(string:openSpaces.filter { $0 > activeSpaceID}.map { String("\($0)") }.joined(separator: " "))
+        let rhs = NSMutableAttributedString(string:openSpaces.filter { $0 < activeSpaceID}.map { String("\($0)") }.joined(separator: " "))
+
+        let activeSpace = String("\(activeSpaceID)")
+        let boldAttributes = [NSAttributedString.Key.font : NSFont.boldSystemFont(ofSize: 11)]
+        let attributedString = NSMutableAttributedString(string: activeSpace, attributes: boldAttributes)
+        
+        lhs.append(attributedString)
+        lhs.append(rhs)
+        statusBarItem.button?.attributedTitle = lhs
     }
 
     func menuWillOpen(_ menu: NSMenu) {
@@ -137,7 +146,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SUUpdaterDel
     }
 
     @IBAction func checkForUpdatesClicked(_ sender: NSMenuItem) {
-        updater.checkForUpdates(sender)
+       print("Sorri")
     }
 
     @IBAction func quitClicked(_ sender: NSMenuItem) {
