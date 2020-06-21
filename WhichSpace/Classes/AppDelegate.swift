@@ -7,17 +7,15 @@
 //
 
 import Cocoa
-import Sparkle
 
 @NSApplicationMain
 @objc
-class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SUUpdaterDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @IBOutlet weak var window: NSWindow!
     @IBOutlet weak var statusMenu: NSMenu!
     @IBOutlet weak var application: NSApplication!
     @IBOutlet weak var workspace: NSWorkspace!
-    @IBOutlet weak var updater: SUUpdater!
 
     let spacesMonitorFile = "~/Library/Preferences/com.apple.spaces.plist"
 
@@ -28,8 +26,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SUUpdaterDel
 
     fileprivate func configureApplication() {
         application = NSApplication.shared
-        // Specifying `.Accessory` both hides the Dock icon and allows
-        // the update dialog to take focus
+        // Specifying `.Accessory` hides the Dock icon
         application.setActivationPolicy(.accessory)
     }
 
@@ -54,13 +51,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SUUpdaterDel
         statusBarItem.button?.cell = StatusItemCell()
         statusBarItem.image = NSImage(named: "default") // This icon appears when switching spaces when cell length is variable width.
         statusBarItem.menu = statusMenu
-    }
-
-    fileprivate func configureSparkle() {
-        updater = SUUpdater.shared()
-        updater.delegate = self
-        // Silently check for updates on launch
-        updater.checkForUpdatesInBackground()
     }
 
     fileprivate func configureSpaceMonitor() {
@@ -104,7 +94,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SUUpdaterDel
         configureApplication()
         configureObservers()
         configureMenuBarIcon()
-        configureSparkle()
         configureSpaceMonitor()
         updateActiveSpaceNumber()
     }
@@ -112,25 +101,36 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SUUpdaterDel
     @objc func updateActiveSpaceNumber() {
         let info = CGSCopyManagedDisplaySpaces(conn) as! [NSDictionary]
         let displayInfo = info[0]
-        let activeSpaceID = (displayInfo["Current Space"]! as! NSDictionary)["ManagedSpaceID"] as! Int
+        var activeSpaceID = (displayInfo["Current Space"]! as! NSDictionary)["ManagedSpaceID"] as! Int
         let spaces = displayInfo["Spaces"] as! NSArray
-        
-        let openSpaces = spaces
-            .compactMap { return ($0 as! NSDictionary)["ManagedSpaceID"] as? Int }
-            .filter { $0 != activeSpaceID }
-            .filter { 0...50 ~= $0 }
-            .sorted()
 
-        let lhs = NSMutableAttributedString(string:openSpaces.filter { $0 > activeSpaceID}.map { String("\($0)") }.joined(separator: " "))
-        let rhs = NSMutableAttributedString(string:openSpaces.filter { $0 < activeSpaceID}.map { String("\($0)") }.joined(separator: " "))
-
-        let activeSpace = String("\(activeSpaceID)")
-        let boldAttributes = [NSAttributedString.Key.font : NSFont.boldSystemFont(ofSize: 11)]
-        let attributedString = NSMutableAttributedString(string: activeSpace, attributes: boldAttributes)
+        for (index, space) in spaces.enumerated() {
+            let spaceID = (space as! NSDictionary)["ManagedSpaceID"] as! Int
+            if spaceID == activeSpaceID {
+                activeSpaceID = index + 1
+            }
+        }
         
-        lhs.append(attributedString)
-        lhs.append(rhs)
-        statusBarItem.button?.attributedTitle = lhs
+        let lhs = Array(1..<activeSpaceID).map { String($0) }.joined(separator: " ")
+        
+        let rhs = activeSpaceID != spaces.count
+            ? Array(activeSpaceID + 1...spaces.count).map { String($0) }.joined(separator: " ")
+            : ""
+
+        let sandwichAttributes = [
+            NSAttributedString.Key.font: NSFont.systemFont(ofSize: 10),
+            NSAttributedString.Key.baselineOffset: NSNumber(value: 1.0)
+        ]
+        
+        let formattedLHS = NSAttributedString(string: lhs, attributes: sandwichAttributes)
+        let formattedRHS = NSAttributedString(string: rhs, attributes: sandwichAttributes)
+
+        let boldAttributes = [NSAttributedString.Key.font : NSFont.boldSystemFont(ofSize: 12)]
+        let formattedCNT = NSMutableAttributedString(string: String(" \(activeSpaceID) "), attributes: boldAttributes)
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.statusBarItem.button?.attributedTitle = formattedLHS + formattedCNT + formattedRHS
+        }
     }
 
     func menuWillOpen(_ menu: NSMenu) {
@@ -143,10 +143,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SUUpdaterDel
         if let cell = statusBarItem.button?.cell as! StatusItemCell? {
             cell.isMenuVisible = false
         }
-    }
-
-    @IBAction func checkForUpdatesClicked(_ sender: NSMenuItem) {
-       print("Sorri")
     }
 
     @IBAction func quitClicked(_ sender: NSMenuItem) {
