@@ -1,24 +1,6 @@
-## WhichSpace [![Build Status](https://travis-ci.org/gechr/WhichSpace.svg?branch=master)](https://travis-ci.org/gechr/WhichSpace)
-Have you ever forgotten _which space_ is currently active on macOS (10.11+) and wanted a quick way to tell? Didn't think so... but I did!
+## WhichSpaces
+This is a fork of [Which Space](https://github.com/gechr/WhichSpace). 
 
-## Screenshot
-![WhichSpace](https://raw.github.com/gechr/WhichSpace/master/Screenshots/WhichSpace.png)
+This fork shows _all_ open spaces (helpful when using a tilling window manager).
 
-## Installation
-
-#### Homebrew
-
-```
-brew cask install whichspace
-```
-
-#### GitHub
-
-* Download and extract the [latest release](https://github.com/gechr/WhichSpace/releases/latest)
-* Run `WhichSpace.app`
-
-## Contributing
-[Pull requests](https://github.com/gechr/WhichSpace/pulls) are welcome!
-
-## TODO
-* Add multi-monitor support
+![screenshot](https://cdn.discordapp.com/attachments/487260107244044319/724381054667980811/Screenshot_2020-06-21_at_5.51.25_PM.png)
